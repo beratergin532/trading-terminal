@@ -1,11 +1,12 @@
+// src/components/layout/MacroTicker.tsx
 "use client";
 
 import * as React from "react";
-import { getMacroSnapshot } from "@/lib/api";
+import { getMacroSnapshot, type MacroSnapshot } from "@/lib/api";
 import { formatUSD, formatPct } from "@/lib/format";
 
 export function MacroTicker() {
-  const [macro, setMacro] = React.useState<any>(null);
+  const [macro, setMacro] = React.useState<MacroSnapshot | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   const fetchLiveMacro = React.useCallback(() => {
@@ -19,23 +20,23 @@ export function MacroTicker() {
 
   React.useEffect(() => {
     fetchLiveMacro();
-    // 10 saniyede bir canlı borsa verisini yenile
-    const interval = setInterval(fetchLiveMacro, 10000);
+    // 15 saniyede bir arka planda canlı yenile
+    const interval = setInterval(fetchLiveMacro, 15000);
     return () => clearInterval(interval);
   }, [fetchLiveMacro]);
 
   const items = React.useMemo(() => {
     if (!macro) return [];
 
-    const list: any[] = [];
+    const list: Array<{ name: string; price: number; change?: number }> = [];
     if (Array.isArray(macro.indices)) {
-      macro.indices.forEach((idx: any) => {
+      macro.indices.forEach((idx) => {
         list.push({ name: idx.name, price: idx.price, change: idx.change });
       });
     }
     if (Array.isArray(macro.commodities)) {
-      macro.commodities.forEach((c: any) => {
-        list.push({ name: c.name, price: c.price, change: c.change });
+      macro.commodities.forEach((c) => {
+        list.push({ name: c.name, price: c.price, change: c.change_pct ?? c.change });
       });
     }
     return list;
@@ -54,7 +55,7 @@ export function MacroTicker() {
         </span>
       </div>
 
-      {/* Sağ: Gerçek Veri Yüklenirken veya Akarken */}
+      {/* Sağ: Kayan Canlı Veri Bandı */}
       <div className="overflow-hidden flex-1 relative pl-6">
         {loading && items.length === 0 ? (
           <div className="flex items-center gap-3 text-slate-500 text-[11px] font-sans">
@@ -64,8 +65,9 @@ export function MacroTicker() {
         ) : (
           <div className="animate-marquee gap-10 cursor-pointer">
             {marqueeItems.map((item, idx) => {
-              const isPos = (item.change || 0) >= 0;
-              const isVix = item.name.includes("VIX");
+              const changeVal = item.change ?? 0;
+              const isPos = changeVal >= 0;
+              const isVix = item.name.toUpperCase().includes("VIX");
 
               return (
                 <div key={idx} className="flex items-center gap-2 shrink-0">
@@ -81,7 +83,7 @@ export function MacroTicker() {
                         isPos ? "text-emerald-400" : "text-rose-400"
                       }`}
                     >
-                      {formatPct(item.change)}
+                      {formatPct(changeVal)}
                     </span>
                   )}
                 </div>

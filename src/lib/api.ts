@@ -1,65 +1,136 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://borsa-motoru.onrender.com/api/v1";
+// src/lib/api.ts
 
-// 1. Piyasa Tarayıcısı (Screener)
-export async function getScreener(): Promise<any> {
-  try {
-    const res = await fetch(`${API_BASE}/screener`, {
-      cache: "no-store",
-      next: { revalidate: 0 },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (err) {
-    console.error("Canlı borsa tarayıcı hatası:", err);
-    return null;
-  }
-}
+import { MarketBreadthResponse, SectorRotationResponse } from "@/types";
 
-// 2. Makro Piyasa Göstergeleri
-export async function getMacroSnapshot(): Promise<any> {
-  try {
-    const res = await fetch(`${API_BASE}/macro`, {
-      cache: "no-store",
-      next: { revalidate: 0 },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (err) {
-    console.error("Canlı makro veri hatası:", err);
-    return null;
-  }
-}
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
 
-// 3. Flaş Şirket Haberleri
-export async function getFlashNews(symbol?: string): Promise<any> {
+// 1. SCREENER (24 Hisse Verisi)
+export async function getScreener(watchList?: string): Promise<any[]> {
   try {
-    const url = symbol 
-      ? `${API_BASE}/news?symbol=${symbol}` 
-      : `${API_BASE}/news`;
-      
-    const res = await fetch(url, {
-      cache: "no-store",
-      next: { revalidate: 0 },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (err) {
-    console.error("Canlı haber akışı hatası:", err);
+    const url = watchList 
+      ? `${API_BASE}/screener?watch_list=${encodeURIComponent(watchList)}` 
+      : `${API_BASE}/screener`;
+    const res = await fetch(url, { next: { revalidate: 45 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.signals)) return data.signals;
+    return [];
+  } catch (error) {
+    console.error("Screener fetch hatası:", error);
     return [];
   }
 }
 
-// 4. Hisse Detay & Gerçek AI Analizi
-export async function getStockDetail(symbol: string): Promise<any> {
+// 2. MAKRO PİYASA
+export async function getMacroSnapshot(): Promise<any | null> {
   try {
-    const res = await fetch(`${API_BASE}/stock/${symbol.toUpperCase()}`, {
-      cache: "no-store",
-      next: { revalidate: 0 },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(`${API_BASE}/macro`, { next: { revalidate: 30 } });
+    if (!res.ok) return null;
     return await res.json();
-  } catch (err) {
-    console.error(`${symbol} hisse detay hatası:`, err);
+  } catch (error) {
+    console.error("Macro fetch hatası:", error);
     return null;
   }
 }
+
+// 3. PİYASA GENİŞLİĞİ VE DUYARLILIK
+export async function getMarketBreadth(): Promise<MarketBreadthResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/market-breadth`, { next: { revalidate: 60 } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.error("Market breadth fetch hatası:", error);
+    return null;
+  }
+}
+
+// 4. SEKTÖREL ROTASYON KADRANI (RRG)
+export async function getSectorRotation(): Promise<SectorRotationResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/sector-rotation`, { next: { revalidate: 60 } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.error("Sector rotation fetch hatası:", error);
+    return null;
+  }
+}
+
+// 5. HABER AKIŞI
+export async function getFlashNews(symbol?: string, limit: number = 10): Promise<any[]> {
+  try {
+    const url = symbol 
+      ? `${API_BASE}/news?symbol=${symbol}&limit=${limit}` 
+      : `${API_BASE}/news?limit=${limit}`;
+    const res = await fetch(url, { next: { revalidate: 120 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.news) ? data.news : Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error("Flash news fetch hatası:", error);
+    return [];
+  }
+}
+
+// 6. TEKİL HİSSE DETAYI
+export async function getStockDetail(
+  symbol: string, 
+  portfolioValue: number = 50000.0, 
+  riskProfile: string = "balanced"
+): Promise<any | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/stock/${symbol}?portfolio_value=${portfolioValue}&risk_profile=${riskProfile}`,
+      { next: { revalidate: 60 } }
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.error(`Stock details (${symbol}) fetch hatası:`, error);
+    return null;
+  }
+}
+export const getStockDetails = getStockDetail;
+
+// 7. GEÇMİŞ GRAFİK VERİSİ (ChartView İçin)
+export async function getSymbolHistory(symbol: string, range: string = "6mo"): Promise<any[]> {
+  try {
+    const res = await fetch(`${API_BASE}/history/${symbol}?range=${range}`, { next: { revalidate: 300 } });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (error) {
+    console.error(`Stock history (${symbol}) fetch hatası:`, error);
+    return [];
+  }
+}
+export const getStockHistory = getSymbolHistory;
+
+// 8. GLOBAL ARAMA PALETİ (CommandPalette İçin)
+export async function searchSymbols(query: string): Promise<any[]> {
+  if (!query || query.trim().length === 0) return [];
+  try {
+    const screener = await getScreener();
+    const q = query.toUpperCase().trim();
+    return screener.filter((s: any) => 
+      (s.symbol && s.symbol.toUpperCase().includes(q)) || 
+      (s.company_name && s.company_name.toUpperCase().includes(q))
+    );
+  } catch {
+    return [];
+  }
+}
+
+// 9. SANAL PORTFÖY VE İŞLEMLER (getPaperTrades ve getPortfolioSummary Çift Destek)
+export async function getPaperTrades(): Promise<any[]> {
+  try {
+    const res = await fetch(`${API_BASE}/portfolio`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (error) {
+    console.error("Paper trades fetch hatası:", error);
+    return [];
+  }
+}
+export const getPortfolioSummary = getPaperTrades;

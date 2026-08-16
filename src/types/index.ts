@@ -228,3 +228,65 @@ export interface MacroSnapshot {
   regime_label?: "RISK-ON" | "RISK-OFF" | "NÖTR" | string; // AI macro read, optional until wired
   regime_summary?: string; // "Güne Başlarken" one-liner from the LLM engine
 }
+export interface FearAndGreedData {
+  score: number;
+  rating: string;
+  previous_close: number;
+  one_week_ago: number;
+}
+
+export interface PutCallRatio {
+  total: number;
+  equity: number;
+  index: number;
+  status: string;
+}
+
+export interface MarketBreadthStats {
+  advances: number;
+  declines: number;
+  unchanged: number;
+  advancing_volume: number;
+  declining_volume: number;
+  advance_decline_ratio: number;
+}
+
+export interface HighLowStats {
+  new_highs: number;
+  new_lows: number;
+  net_highs: number;
+}
+
+export interface VixData {
+  value: number;
+  change_pct: number;
+  regime: string;
+}
+
+export interface MarketBreadthResponse {
+  timestamp: string;
+  vix: VixData;
+  fear_and_greed: FearAndGreedData;
+  put_call: PutCallRatio;
+  nyse_breadth: MarketBreadthStats;
+  nasdaq_breadth: MarketBreadthStats;
+  nyse_high_low: HighLowStats;
+  nasdaq_high_low: HighLowStats;
+}
+export interface SectorCoordinate {
+  name: string;
+  symbol: string;
+  rs_ratio: number;
+  rs_momentum: number;
+  quadrant: "Leading" | "Weakening" | "Lagging" | "Improving";
+  daily_change: number;
+  color: string;
+}
+
+export interface SectorRotationResponse {
+  timestamp: string;
+  benchmark: string;
+  leading_sector: string;
+  lagging_sector: string;
+  sectors: SectorCoordinate[];
+}

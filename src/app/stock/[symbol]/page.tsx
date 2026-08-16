@@ -1,3 +1,5 @@
+// src/app/stock/[symbol]/page.tsx
+
 import { getStockDetail, getFlashNews } from "@/lib/api";
 import { PriceHeader } from "@/components/stock/PriceHeader";
 import { ChartView } from "@/components/stock/ChartView";
@@ -17,7 +19,7 @@ export default async function StockDetailPage({ params }: { params: { symbol: st
 
   const [stockResponse, newsData] = await Promise.all([
     getStockDetail(symbol),
-    getFlashNews(symbol),
+    getFlashNews(symbol, 10),
   ]);
 
   if (!stockResponse || !stockResponse.market_data) {
