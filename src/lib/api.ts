@@ -4,6 +4,39 @@ import { MarketBreadthResponse, SectorRotationResponse } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
 
+// ==========================================
+// MAKRO & PİYASA TİP TANIMLARI
+// ==========================================
+export interface MacroCommodity {
+  name: string;
+  price: number;
+  change: number;
+}
+
+export interface MacroIndex {
+  name: string;
+  price: number;
+  change: number;
+}
+
+export interface MacroSnapshot {
+  regime_label?: string;
+  market_regime?: string;
+  sentiment_score?: number;
+  summary?: string;
+  regime_summary?: string;
+  vix?: number;
+  vix_change?: number;
+  sp500_change?: number;
+  nasdaq_change?: number;
+  indices?: MacroIndex[];
+  commodities?: MacroCommodity[];
+}
+
+// ==========================================
+// API FONKSİYONLARI
+// ==========================================
+
 // 1. SCREENER (24 Hisse Verisi)
 export async function getScreener(watchList?: string): Promise<any[]> {
   try {
@@ -23,7 +56,7 @@ export async function getScreener(watchList?: string): Promise<any[]> {
 }
 
 // 2. MAKRO PİYASA
-export async function getMacroSnapshot(): Promise<any | null> {
+export async function getMacroSnapshot(): Promise<MacroSnapshot | null> {
   try {
     const res = await fetch(`${API_BASE}/macro`, { next: { revalidate: 30 } });
     if (!res.ok) return null;
@@ -94,7 +127,7 @@ export async function getStockDetail(
 }
 export const getStockDetails = getStockDetail;
 
-// 7. GEÇMİŞ GRAFİK VERİSİ (ChartView İçin)
+// 7. GEÇMİŞ GRAFİK VERİSİ
 export async function getSymbolHistory(symbol: string, range: string = "6mo"): Promise<any[]> {
   try {
     const res = await fetch(`${API_BASE}/history/${symbol}?range=${range}`, { next: { revalidate: 300 } });
@@ -107,7 +140,7 @@ export async function getSymbolHistory(symbol: string, range: string = "6mo"): P
 }
 export const getStockHistory = getSymbolHistory;
 
-// 8. GLOBAL ARAMA PALETİ (CommandPalette İçin)
+// 8. GLOBAL ARAMA PALETİ
 export async function searchSymbols(query: string): Promise<any[]> {
   if (!query || query.trim().length === 0) return [];
   try {
@@ -122,7 +155,7 @@ export async function searchSymbols(query: string): Promise<any[]> {
   }
 }
 
-// 9. SANAL PORTFÖY VE İŞLEMLER (getPaperTrades ve getPortfolioSummary Çift Destek)
+// 9. SANAL PORTFÖY
 export async function getPaperTrades(): Promise<any[]> {
   try {
     const res = await fetch(`${API_BASE}/portfolio`, { cache: "no-store" });

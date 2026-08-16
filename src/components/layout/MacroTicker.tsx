@@ -11,7 +11,10 @@ export function MacroTicker() {
 
   const fetchLiveMacro = React.useCallback(() => {
     getMacroSnapshot().then((data) => {
-      if (data && (data.indices?.length > 0 || data.commodities?.length > 0)) {
+      if (
+        data &&
+        (((data.indices?.length ?? 0) > 0) || ((data.commodities?.length ?? 0) > 0))
+      ) {
         setMacro(data);
         setLoading(false);
       }
@@ -20,7 +23,6 @@ export function MacroTicker() {
 
   React.useEffect(() => {
     fetchLiveMacro();
-    // 15 saniyede bir arka planda canlı yenile
     const interval = setInterval(fetchLiveMacro, 15000);
     return () => clearInterval(interval);
   }, [fetchLiveMacro]);
@@ -35,7 +37,7 @@ export function MacroTicker() {
       });
     }
     if (Array.isArray(macro.commodities)) {
-      macro.commodities.forEach((c) => {
+      macro.commodities.forEach((c: any) => {
         list.push({ name: c.name, price: c.price, change: c.change_pct ?? c.change });
       });
     }
